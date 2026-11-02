@@ -12,6 +12,34 @@
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
   ] };
+  // Качество: VP9 первым, высокий стартовый битрейт, стерео-звук высокого качества
+  function sdpTune(sdp) {
+    try {
+      const L = sdp.split('\r\n');
+      const rtpmap = {};
+      L.forEach((l) => { const m = l.match(/^a=rtpmap:(\d+) ([^/]+)\//); if (m) rtpmap[m[1]] = m[2].toUpperCase(); });
+      const mi = L.findIndex((l) => l.startsWith('m=video'));
+      if (mi >= 0) {
+        const parts = L[mi].split(' ');
+        const pts = parts.slice(3);
+        const vp9 = pts.filter((p) => rtpmap[p] === 'VP9'), av = pts.filter((p) => rtpmap[p] === 'AV1');
+        const rest = pts.filter((p) => !vp9.includes(p) && !av.includes(p));
+        L[mi] = parts.slice(0, 3).concat(vp9, rest, av).join(' ');
+        const bw = 'x-google-start-bitrate=4000;x-google-min-bitrate=1000;x-google-max-bitrate=12000';
+        pts.filter((p) => ['VP9', 'VP8', 'H264', 'AV1'].includes(rtpmap[p])).forEach((p) => {
+          const fi = L.findIndex((l) => l.startsWith('a=fmtp:' + p + ' '));
+          if (fi >= 0) L[fi] += ';' + bw;
+          else { const ri = L.findIndex((l) => l.startsWith('a=rtpmap:' + p + ' ')); L.splice(ri + 1, 0, 'a=fmtp:' + p + ' ' + bw); }
+        });
+      }
+      Object.keys(rtpmap).filter((p) => rtpmap[p] === 'OPUS').forEach((p) => {
+        const fi = L.findIndex((l) => l.startsWith('a=fmtp:' + p + ' '));
+        if (fi >= 0 && !/stereo=1/.test(L[fi])) L[fi] += ';stereo=1;sprop-stereo=1;maxaveragebitrate=256000';
+      });
+      return L.join('\r\n');
+    } catch (e) { return sdp; }
+  }
+
   const peerOpts = () => Object.assign({ config: ICE, debug: 1 }, window.KINO_PEER || {});
 
   /* ---------- иконки ---------- */
@@ -152,7 +180,7 @@
     peer.on('call', (c) => {
       if (call) try { call.close(); } catch (e) {}
       call = c;
-      c.answer();
+      c.answer(undefined, { sdpTransform: sdpTune });
       c.on('stream', onRemoteStream);
       c.on('close', () => { if (call === c) call = null; });
     });
@@ -284,8 +312,7 @@
     if (!stream) { toast('Этот браузер не умеет транслировать видео. Открой сайт в Chrome или Edge.', 6000); return; }
     const t0 = performance.now();
     while (stream.getTracks().length < 2 && performance.now() - t0 < 2000) await new Promise((r) => setTimeout(r, 100));
-    stream.getVideoTracks().forEach((t) => { try { t.contentHint = 'motion'; } catch (e) {} });
-    call = peer.call(conn.peer, stream);
+    call = peer.call(conn.peer, stream, { sdpTransform: sdpTune });
     setTimeout(() => {
       const pc = call && call.peerConnection;
       if (!pc) return;
@@ -293,7 +320,8 @@
         if (!s.track || s.track.kind !== 'video') return;
         const p = s.getParameters();
         if (!p.encodings || !p.encodings.length) p.encodings = [{}];
-        p.encodings[0].maxBitrate = 8_000_000;
+        p.encodings[0].maxBitrate = 12_000_000;
+        p.encodings[0].maxFramerate = 60;
         s.setParameters(p).catch(() => {});
       });
     }, 1500);
@@ -352,6 +380,7 @@
   $('tapOverlay').onclick = () => { $('tapOverlay').classList.add('hidden'); v.play().catch(() => {}); };
 
   function guestWaiting() {
+    const addQ = () => { if (quality) { const q = document.createElement('span'); q.className = 'q'; q.textContent = quality; bar.appendChild(q); } };
     const title = epNames.length ? prettyName(epNames[curEp]) : '';
     if (title) setEmpty(title, 'Сейчас начнётся. Если эти файлы есть и у тебя — открой их, картинка будет в исходном качестве.', { loading: true, actions: true });
     else setEmpty(pName() + ' выбирает, что смотреть', 'Как только выберет — кино появится здесь.', { loading: true });
@@ -452,16 +481,19 @@
     bar.innerHTML = '';
     const add = (html) => { const s = document.createElement('span'); s.innerHTML = html; bar.appendChild(s); };
     const btn = (text, fn) => { const b = document.createElement('button'); b.textContent = text; b.onclick = fn; bar.appendChild(b); };
+    const addQ = () => { if (quality) { const q = document.createElement('span'); q.className = 'q'; q.textContent = quality; bar.appendChild(q); } };
     const title = epNames.length ? (isSeries() ? 'Серия ' + (curEp + 1) + ' из ' + epNames.length + ': ' : '') + '<b>' + esc(prettyName(epNames[curEp])) + '</b>' : '';
     if (role === 'host') {
       if (!hasLocalFile) { add(conn ? pName() + ' уже в зале. Выбери, что смотреть.' : 'Нажми «Пригласить» и отправь ссылку.'); return; }
       add(title);
       add(!conn ? 'ждём второго зрителя' : esc(pName()) + (partnerWantsStream ? ' смотрит твою трансляцию' : ' смотрит со своих файлов, синхронно с тобой'));
+      addQ();
     } else if (guestMode === 'local') {
       add(title);
       btn('Смотреть трансляцию', backToStream);
     } else if (v.srcObject) {
       add(title);
+      addQ();
       btn('Нет картинки? Переподключить', () => { askRestream(); toast('Переподключаем видео…'); });
       btn('Открыть свои файлы — качество лучше', () => $(isSeries() ? 'seriesInput' : 'fileInput').click());
     }
@@ -486,6 +518,30 @@
     setTimeout(() => { if (v.textTracks[0]) v.textTracks[0].mode = 'showing'; }, 50);
     if (share) { send({ t: 'subs', vtt }); toast('Субтитры добавлены'); }
   }
+
+  /* ---------- индикатор качества ---------- */
+  let lastBytes = 0, lastStatT = 0, quality = '';
+  setInterval(async () => {
+    const pc = call && call.peerConnection;
+    const streaming = pc && ((role === 'host' && partnerWantsStream) || (role === 'guest' && guestMode === 'stream'));
+    if (!streaming) { if (quality) { quality = ''; renderSource(); } return; }
+    try {
+      const st = await pc.getStats();
+      let h = 0, bytes = 0, fps = 0, codec = '';
+      st.forEach((r) => {
+        if (r.kind === 'video' && (r.type === 'inbound-rtp' || r.type === 'outbound-rtp')) {
+          h = r.frameHeight || h; fps = r.framesPerSecond || fps;
+          bytes += (r.bytesReceived || r.bytesSent || 0);
+          if (r.codecId && st.get(r.codecId)) codec = st.get(r.codecId).mimeType.split('/')[1];
+        }
+      });
+      const now = performance.now();
+      const mbps = lastStatT && bytes >= lastBytes ? ((bytes - lastBytes) * 8) / ((now - lastStatT) / 1000) / 1e6 : 0;
+      lastBytes = bytes; lastStatT = now;
+      const q = h ? h + 'p · ' + mbps.toFixed(1) + ' Мбит/с' + (fps ? ' · ' + Math.round(fps) + ' к/с' : '') + (codec ? ' · ' + codec : '') : '';
+      if (q !== quality) { quality = q; renderSource(); }
+    } catch (e) {}
+  }, 2000);
 
   /* ---------- подсветка от кадра (как ambient mode на YouTube) ---------- */
   const amb = $('ambient'), actx = amb.getContext('2d', { willReadFrequently: false });
@@ -574,7 +630,7 @@
   $('fsBtn').onclick = toggleFs;
   const fsForm = document.createElement('form');
   fsForm.className = 'fs-input hidden';
-  fsForm.innerHTML = '<input maxlength="500" placeholder="Написать"><button class="send" type="submit" title="Отправить">' + IC.send + '</button>';
+  fsForm.innerHTML = '<input maxlength="500" placeholder="Просто начни печатать"><button class="send" type="submit" title="Отправить">' + IC.send + '</button>';
   $('fsDock').appendChild(fsForm);
   fsForm.onsubmit = (e) => { e.preventDefault(); const i = fsForm.firstChild; sendChat(i.value); i.value = ''; i.blur(); };
   const fsChange = () => fsForm.classList.toggle('hidden', !inFs());
@@ -596,6 +652,13 @@
   document.addEventListener('keydown', (e) => {
     if (!$('room').classList.contains('active')) return;
     if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') e.target.blur(); return; }
+    // во весь экран: просто начинаешь печатать — текст сразу идёт в чат
+    if (inFs() && e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      const i = fsForm.firstChild;
+      i.focus(); i.value += e.key; wake();
+      return;
+    }
     if (e.code === 'Space' || e.code === 'KeyK') { e.preventDefault(); togglePlay(); wake(); }
     else if (e.key === 'ArrowLeft') { seekTo(curTime() - 5); wake(); }
     else if (e.key === 'ArrowRight') { seekTo(curTime() + 5); wake(); }
