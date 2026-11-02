@@ -296,7 +296,12 @@
   }
   function syncNow(tol) {
     if (!srv || v.readyState < 1) return;
-    const t = srvNow();
+    let t = srvNow();
+    // у конца фильма: не перезапускаем закончившееся видео
+    if (v.duration && t >= v.duration - 0.25) {
+      if (!v.ended && Math.abs(v.currentTime - v.duration) > tol) v.currentTime = v.duration;
+      return;
+    }
     if (Math.abs(v.currentTime - t) > tol) v.currentTime = t;
     if (srv.playing && v.paused) v.play().catch(showTap);
     if (!srv.playing && !v.paused) v.pause();
@@ -317,6 +322,7 @@
       const tt = [...v.textTracks];
       const pick = subsChoice[it.id] !== undefined ? subsChoice[it.id] : tt.findIndex((t) => /Загруж|Рус/.test(t.label));
       tt.forEach((t, i) => { t.mode = i === pick ? 'showing' : 'disabled'; });
+      wsSend({ t: 'dur', item: cur.item, ep: cur.ep, dur: v.duration });
       syncNow(0.2);
     }, { once: true });
     showLib(false);
@@ -328,10 +334,11 @@
     if (!cur.item) return;
     lastMyAction = performance.now();
     srv = { ...(srv || {}), item: cur.item, ep: cur.ep, playing, time, recv: performance.now() };
-    wsSend({ t: 'ctl', action, item: cur.item, ep: cur.ep, playing, time });
+    wsSend({ t: 'ctl', action, item: cur.item, ep: cur.ep, playing, time, dur: v.duration || 0 });
   }
   function togglePlay() {
     if (!v.src) return;
+    if (v.ended || (v.duration && v.currentTime >= v.duration - 0.25)) { v.currentTime = 0; v.play().catch(showTap); ctl('seek', true, 0); return; }
     if (v.paused) { v.play().catch(showTap); ctl('ctl', true, v.currentTime); }
     else { v.pause(); ctl('ctl', false, v.currentTime); }
   }
@@ -353,6 +360,7 @@
   // конец серии → следующая через 5 секунд
   let nextT = null;
   v.addEventListener('ended', () => {
+    if (srv && srv.playing) ctl('end', false, v.duration || v.currentTime);
     const it = lib.find((x) => x.id === cur.item);
     if (!it || cur.ep >= it.files.length - 1 || it.files[cur.ep + 1].status !== 'ready') return;
     toast('Через 5 секунд — серия ' + (cur.ep + 2), 4800);

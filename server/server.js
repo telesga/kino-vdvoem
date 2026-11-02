@@ -299,8 +299,13 @@ server.headersTimeout = 60000;
 
 /* ---------- синхронизация и чат (WebSocket) ---------- */
 // Эталон — на сервере: что смотрим, идёт ли, с какого места, и когда это было.
-const state = { item: null, ep: 0, playing: false, time: 0, at: Date.now(), by: null };
-const projected = () => state.time + (state.playing ? (Date.now() - state.at) / 1000 : 0);
+const state = { item: null, ep: 0, playing: false, time: 0, at: Date.now(), by: null, dur: 0 };
+// текущее место; дошли до конца — фиксируем «стоп в конце», а не уходим дальше
+function projected() {
+  let t = state.time + (state.playing ? (Date.now() - state.at) / 1000 : 0);
+  if (state.dur && t >= state.dur) { t = state.dur; if (state.playing) Object.assign(state, { playing: false, time: t, at: Date.now() }); }
+  return t;
+}
 const clients = new Set();
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1 << 20 });
 server.on('upgrade', (req, sock, head) => {
@@ -326,13 +331,17 @@ wss.on('connection', (ws) => {
         broadcast({ t: 'peers', peers: peers(), joined: ws.name, id: ws.id });
         break;
       case 'select': // выбрать фильм/серию
-        Object.assign(state, { item: m.item, ep: +m.ep || 0, playing: !!m.play, time: 0, at: Date.now(), by: ws.name });
+        Object.assign(state, { item: m.item, ep: +m.ep || 0, playing: !!m.play, time: 0, at: Date.now(), by: ws.name, dur: 0 });
         broadcast({ t: 'state', state: snapshot(), action: 'select', by: ws.name, from: ws.id });
         break;
       case 'ctl': // пуск / пауза / перемотка
         if (m.item !== state.item || (+m.ep || 0) !== state.ep) break;
+        if (+m.dur > 0) state.dur = +m.dur;
         Object.assign(state, { playing: !!m.playing, time: Math.max(0, +m.time || 0), at: Date.now(), by: ws.name });
         broadcast({ t: 'state', state: snapshot(), action: m.action || 'ctl', by: ws.name, from: ws.id });
+        break;
+      case 'dur':
+        if (m.item === state.item && (+m.ep || 0) === state.ep && +m.dur > 0) state.dur = +m.dur;
         break;
       case 'sync':
         send(ws, { t: 'state', state: snapshot(), action: 'sync' });
