@@ -6,6 +6,10 @@
 # Свой домен:   ... | sudo DOMAIN=kino.example.ru bash
 set -euo pipefail
 
+# Всё внутри функции: bash читает скрипт целиком до запуска,
+# и программы, читающие ввод (needrestart и т.п.), не «съедят» остаток при curl | bash.
+main() {
+
 REPO="https://github.com/telesga/kino-vdvoem.git"
 APP=/opt/kino
 DATA=/var/lib/kino
@@ -14,7 +18,7 @@ ENVF=/etc/kino.env
 say() { printf '\n\033[1;37m▸ %s\033[0m\n' "$*"; }
 trap 'printf "\n\033[1;31m✘ Ошибка (строка %s): %s\033[0m\nПришли этот текст — разберёмся.\n" "$LINENO" "$BASH_COMMAND"' ERR
 [ "$(id -u)" = 0 ] || { echo "Запусти через sudo"; exit 1; }
-export DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 
 say "Ставлю системные пакеты (ffmpeg, git, curl)…"
 apt-get update -qq
@@ -103,3 +107,6 @@ printf '  Место под фильмы: %s\n\n' "$FREE"
 printf '  Если сайт не открывается — открой порты 80 и 443 в настройках сервера\n'
 printf '  (в AWS: EC2 → Security Groups → Inbound rules → HTTP и HTTPS, источник 0.0.0.0/0).\n'
 printf '  Логи: journalctl -u kino -f\n\n'
+}
+
+main "$@" < /dev/null
