@@ -52,7 +52,7 @@ mkdir -p "$DATA" && chown -R kino:kino "$DATA"
 # пароль: из переменной, из прошлой установки или новый случайный
 if [ -n "${KINO_PASSWORD:-}" ]; then PASS="$KINO_PASSWORD"
 elif [ -f "$ENVF" ] && grep -q '^KINO_PASSWORD=' "$ENVF"; then PASS="$(grep '^KINO_PASSWORD=' "$ENVF" | cut -d= -f2-)"
-else PASS="$(tr -dc 'a-z0-9' </dev/urandom | head -c 10)"; fi
+else PASS="$(openssl rand -hex 5 2>/dev/null || od -An -N5 -tx1 /dev/urandom | tr -d ' \n')"; fi
 cat > "$ENVF" <<EOF
 KINO_PASSWORD=$PASS
 KINO_DATA=$DATA
