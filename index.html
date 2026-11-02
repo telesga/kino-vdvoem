@@ -4,107 +4,121 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Кино вдвоём</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<meta name="theme-color" content="#121a33">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='10' width='11' height='14' rx='3' fill='%239c2f45'/><rect x='18' y='10' width='11' height='14' rx='3' fill='%239c2f45'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="bg-glow"></div>
 
-<!-- ЛОББИ -->
+<!-- Лобби: билет -->
 <section id="lobby" class="screen active">
-  <div class="lobby-card">
-    <div class="logo">🎬</div>
-    <h1>Кино <em>вдвоём</em></h1>
-    <p class="sub" id="lobbySub">Создай комнату, отправь ссылку — и смотрите вместе, где бы вы ни были.</p>
-    <input id="nameInput" maxlength="24" placeholder="Как тебя зовут?" autocomplete="off">
-    <button id="enterBtn" class="btn primary">Создать комнату</button>
-    <p class="hint">Фильм не загружается ни на какой сервер — он идёт напрямую с твоего устройства.</p>
+  <div class="ticket">
+    <div class="t-main">
+      <h1 class="wordmark">Кино<br>вдвоём</h1>
+      <p class="lead" id="lobbySub">Ты включаешь фильм у себя — второй человек смотрит его одновременно с тобой. Файл никуда не загружается.</p>
+      <label for="nameInput" class="field-label">Как тебя зовут</label>
+      <input id="nameInput" maxlength="24" autocomplete="off" spellcheck="false">
+      <button id="enterBtn" class="btn ink">Открыть зал</button>
+    </div>
+    <div class="t-stub" aria-hidden="true">
+      <span class="stub-row">Ряд 1</span>
+      <span class="stub-seats" id="stubSeats">места<br>1 и 2</span>
+      <span class="stub-note">на двоих</span>
+    </div>
   </div>
 </section>
 
-<!-- КОМНАТА -->
+<!-- Зал -->
 <section id="room" class="screen">
-  <header class="topbar">
-    <div class="brand">🎬 <span>Кино вдвоём</span></div>
-    <div class="status" id="status"><span class="dot"></span><span id="statusText">Ждём подключения…</span></div>
-    <div class="top-actions">
-      <button id="copyLinkBtn" class="btn ghost small">🔗 Скопировать ссылку</button>
+  <header class="bar">
+    <div class="logo">Кино вдвоём</div>
+    <div class="seats" id="seats">
+      <div class="seat on" id="seatMe"><svg viewBox="0 0 28 26"><path d="M5 12V6a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v6"/><rect x="2" y="11" width="24" height="9" rx="3"/><path d="M6 20v4M22 20v4"/></svg><span id="seatMeName">Я</span></div>
+      <div class="seat" id="seatThem"><svg viewBox="0 0 28 26"><path d="M5 12V6a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v6"/><rect x="2" y="11" width="24" height="9" rx="3"/><path d="M6 20v4M22 20v4"/></svg><span id="seatThemName">свободно</span></div>
     </div>
+    <button id="copyLinkBtn" class="btn paper small">Пригласить</button>
   </header>
 
   <main class="layout">
-    <div class="stage" id="stage">
+    <div class="stage">
       <div class="player" id="player">
         <video id="video" playsinline></video>
 
         <div class="empty" id="emptyState">
           <div class="empty-inner">
-            <div class="empty-icon">🍿</div>
-            <h2 id="emptyTitle">Выбери фильм</h2>
-            <p id="emptyText">Файл с компьютера (mp4, webm, mkv*). Он будет транслироваться твоему собеседнику.</p>
-            <div class="empty-actions">
-              <label class="btn primary" id="pickBtn">📁 Выбрать фильм<input type="file" id="fileInput" accept="video/*,.mkv" hidden></label>
-              <label class="btn ghost" id="subsBtn">💬 Субтитры (.srt/.vtt)<input type="file" id="subsInput" accept=".srt,.vtt" hidden></label>
+            <h2 id="emptyTitle">Что смотрим?</h2>
+            <p id="emptyText">Выбери файл на этом компьютере. Надёжнее всего работает mp4.</p>
+            <div class="empty-actions" id="emptyActions">
+              <label class="choice" id="pickBtn">
+                <input type="file" id="fileInput" accept="video/*,.mkv" hidden>
+                <b id="pickLabel">Фильм</b><span id="pickHint">один файл</span>
+              </label>
+              <label class="choice" id="seriesBtn">
+                <input type="file" id="seriesInput" accept="video/*,.mkv" multiple hidden>
+                <b id="seriesLabel">Сериал</b><span id="seriesHint">выдели все серии сразу</span>
+              </label>
             </div>
-            <p class="tiny" id="emptyFoot">* mkv воспроизводится не во всех браузерах — лучше mp4 (H.264/AAC).</p>
+            <div class="loader hidden" id="loader"><i></i><i></i><i></i></div>
           </div>
         </div>
 
-        <div class="tap-overlay hidden" id="tapOverlay"><button class="btn primary big">▶ Нажми, чтобы смотреть</button></div>
+        <div class="tap-overlay hidden" id="tapOverlay"><button class="btn paper">Включить со звуком</button></div>
         <div class="toast hidden" id="toast"></div>
         <div class="reactions" id="reactions"></div>
-
-        <!-- оверлей чата в фуллскрине -->
         <div class="fs-chat" id="fsChat"></div>
 
+        <div class="eps hidden" id="epsPanel">
+          <div class="eps-head"><span id="epsTitle">Серии</span><button class="ic" id="epsClose" title="Закрыть"></button></div>
+          <ol class="eps-list" id="epsList"></ol>
+        </div>
+
         <div class="controls" id="controls">
-          <div class="seek-wrap">
+          <div class="seek-wrap" id="seekWrap">
             <div class="seek" id="seek">
               <div class="seek-buf" id="seekBuf"></div>
               <div class="seek-fill" id="seekFill"></div>
-              <div class="seek-thumb" id="seekThumb"></div>
-              <div class="seek-tip" id="seekTip">0:00</div>
+              <div class="seek-head" id="seekHead"></div>
             </div>
+            <div class="seek-tip" id="seekTip">0:00</div>
           </div>
           <div class="ctrl-row">
-            <button class="icon" id="playBtn" title="Пауза / Пуск (пробел)">▶</button>
-            <button class="icon" id="back10" title="-10 сек">⟲</button>
-            <button class="icon" id="fwd10" title="+10 сек">⟳</button>
+            <button class="ic big" id="playBtn" title="Пуск / пауза (пробел)"></button>
+            <button class="ic" id="back10" title="Назад на 10 секунд"></button>
+            <button class="ic" id="fwd10" title="Вперёд на 10 секунд"></button>
             <div class="vol">
-              <button class="icon" id="muteBtn" title="Звук">🔊</button>
-              <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+              <button class="ic" id="muteBtn" title="Звук (M)"></button>
+              <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Громкость">
             </div>
             <span class="time" id="time">0:00 / 0:00</span>
             <div class="spacer"></div>
-            <div class="react-bar">
-              <button class="react" data-e="❤️">❤️</button>
-              <button class="react" data-e="😂">😂</button>
-              <button class="react" data-e="😱">😱</button>
-              <button class="react" data-e="😭">😭</button>
-              <button class="react" data-e="🔥">🔥</button>
+            <div class="react-bar" id="reactBar">
+              <button class="react" data-e="❤️" title="Отправить сердечко">❤️</button>
+              <button class="react" data-e="😂" title="Смешно">😂</button>
+              <button class="react" data-e="😱" title="Страшно">😱</button>
+              <button class="react" data-e="😭" title="Грустно">😭</button>
             </div>
-            <button class="icon" id="changeBtn" title="Сменить фильм">📁</button>
-            <button class="icon" id="fsBtn" title="Полный экран (F)">⛶</button>
+            <button class="ic hidden" id="prevEp" title="Предыдущая серия"></button>
+            <button class="ic hidden" id="nextEp" title="Следующая серия"></button>
+            <button class="ic hidden" id="epsBtn" title="Все серии"></button>
+            <button class="ic" id="subsCtl" title="Добавить субтитры (.srt, .vtt)"></button>
+            <button class="ic" id="changeBtn" title="Выбрать другое"></button>
+            <button class="ic" id="fsBtn" title="Во весь экран (F)"></button>
           </div>
         </div>
       </div>
-      <div class="source-bar" id="sourceBar"></div>
+      <div class="now" id="sourceBar"></div>
+      <input type="file" id="subsInput" accept=".srt,.vtt" hidden>
     </div>
 
-    <aside class="chat" id="chat">
-      <div class="chat-head">
-        <span>Чат</span>
-        <span class="who" id="whoOnline"></span>
-      </div>
-      <div class="messages" id="messages">
-        <div class="sys">Здесь будут ваши сообщения 💌</div>
-      </div>
-      <div class="typing hidden" id="typing">печатает…</div>
+    <aside class="chat">
+      <div class="messages" id="messages"></div>
+      <div class="typing hidden" id="typing"></div>
       <form class="chat-input" id="chatForm" autocomplete="off">
-        <input id="chatInput" maxlength="500" placeholder="Напиши что-нибудь…">
-        <button class="send" title="Отправить">➤</button>
+        <input id="chatInput" maxlength="500" placeholder="Написать">
+        <button class="send" id="sendBtn" title="Отправить"></button>
       </form>
     </aside>
   </main>
