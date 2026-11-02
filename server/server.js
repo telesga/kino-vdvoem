@@ -25,6 +25,8 @@ const secretFile = path.join(DATA, 'secret');
 if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, crypto.randomBytes(32).toString('hex'));
 const SECRET = fs.readFileSync(secretFile, 'utf8').trim();
 const TOKEN = crypto.createHmac('sha256', SECRET).update('kino:' + PASSWORD).digest('hex');
+// ключ для ссылки-приглашения: меняется вместе с паролем
+const INVITE = crypto.createHmac('sha256', SECRET).update('invite:' + PASSWORD).digest('hex').slice(0, 20);
 const cookies = (req) => Object.fromEntries((req.headers.cookie || '').split(';').map((c) => c.trim().split('=').map(decodeURIComponent)).filter((x) => x[0]));
 const authed = (req) => !PASSWORD || cookies(req).kino === TOKEN;
 const safeEq = (a, b) => { const A = Buffer.from(String(a)), B = Buffer.from(String(b)); return A.length === B.length && crypto.timingSafeEqual(A, B); };
@@ -245,7 +247,8 @@ const server = http.createServer(async (req, res) => {
     const p = decodeURIComponent(url.pathname);
     if (p === '/api/login' && req.method === 'POST') {
       const b = await readBody(req);
-      if (PASSWORD && !safeEq(b.password || '', PASSWORD)) { await new Promise((r) => setTimeout(r, 800)); return json(res, 401, { error: 'Неверный пароль' }); }
+      const okKey = b.key && safeEq(b.key, INVITE);
+      if (PASSWORD && !okKey && !safeEq(b.password || '', PASSWORD)) { await new Promise((r) => setTimeout(r, 800)); return json(res, 401, { error: 'Неверный пароль' }); }
       res.setHeader('Set-Cookie', `kino=${TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''}`);
       return json(res, 200, { ok: true });
     }
@@ -253,6 +256,7 @@ const server = http.createServer(async (req, res) => {
       if (!authed(req)) return json(res, 401, { error: 'auth' });
     }
     if (p === '/api/me') return json(res, 200, { ok: true });
+    if (p === '/api/invite') return json(res, 200, { key: INVITE });
     if (p === '/api/library' && req.method === 'GET') return json(res, 200, await library());
     if (p === '/api/disk') {
       const s = await fsp.statfs(DATA).catch(() => null);

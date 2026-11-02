@@ -57,11 +57,19 @@
     e.preventDefault();
     myName = $('nameInput').value.trim() || 'Гость';
     localStorage.setItem('kino-name', myName);
+    // уже вошли по ссылке-приглашению — пароль не нужен
+    if ((await fetch('/api/me', { credentials: 'same-origin' })).ok) { enterRoom(); return; }
     const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('passInput').value }) });
     if (!r.ok) { $('loginErr').textContent = 'Неверный пароль'; $('loginErr').classList.remove('hidden'); return; }
     enterRoom();
   };
   (async () => {
+    // вход по ссылке-приглашению: ?k=ключ — пароль не нужен
+    const k = new URLSearchParams(location.search).get('k');
+    if (k) {
+      await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: k }) });
+      history.replaceState(null, '', location.pathname);
+    }
     const r = await fetch('/api/me', { credentials: 'same-origin' });
     if (r.ok && myName) enterRoom();
     else if (r.ok) { $('passInput').parentNode && ($('passInput').style.display = 'none'); document.querySelector('label[for=passInput]').style.display = 'none'; }
@@ -531,8 +539,9 @@
 
   /* ---------- приглашение ---------- */
   $('copyLinkBtn').onclick = async () => {
-    const link = location.origin + '/';
-    try { await navigator.clipboard.writeText(link); toast('Ссылка скопирована. Пароль отправь отдельно.', 3500); }
+    let link = location.origin + '/';
+    try { const j = await (await api('/api/invite')).json(); link += '?k=' + j.key; } catch (e) {}
+    try { await navigator.clipboard.writeText(link); toast('Ссылка скопирована — по ней можно зайти без пароля', 3500); }
     catch (e) { prompt('Скопируй ссылку:', link); }
   };
 })();
