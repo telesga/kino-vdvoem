@@ -4,20 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Кино вдвоём</title>
-<meta name="theme-color" content="#121a33">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='10' width='11' height='14' rx='3' fill='%239c2f45'/><rect x='18' y='10' width='11' height='14' rx='3' fill='%239c2f45'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
 <!-- Лобби: билет -->
 <section id="lobby" class="screen active">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="ticket">
     <div class="t-main">
-      <h1 class="wordmark">Кино<br>вдвоём</h1>
+      <h1 class="wordmark">Кино вдвоём</h1>
       <p class="lead" id="lobbySub">Ты включаешь фильм у себя — второй человек смотрит его одновременно с тобой. Файл никуда не загружается.</p>
       <label for="nameInput" class="field-label">Как тебя зовут</label>
       <input id="nameInput" maxlength="24" autocomplete="off" spellcheck="false">
@@ -44,6 +45,7 @@
 
   <main class="layout">
     <div class="stage">
+      <canvas class="ambient" id="ambient" width="32" height="18" aria-hidden="true"></canvas>
       <div class="player" id="player">
         <video id="video" playsinline></video>
 
@@ -125,6 +127,6 @@
 </section>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

@@ -70,6 +70,8 @@
     myName = $('nameInput').value.trim() || (role === 'host' ? 'Я' : 'Гость');
     localStorage.setItem('kino-name', myName);
     $('seatMeName').textContent = myName;
+    $('seatMe').dataset.i = myName.slice(0, 1).toUpperCase();
+    $('seatThem').dataset.i = '?';
     $('lobby').classList.remove('active');
     $('room').classList.add('active');
     startRoom();
@@ -93,7 +95,7 @@
     clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hidden'), ms);
   };
   // кресло собеседника
-  const seat = (text, on) => { $('seatThemName').textContent = text; $('seatThem').classList.toggle('on', !!on); };
+  const seat = (text, on) => { $('seatThemName').textContent = text; $('seatThem').classList.toggle('on', !!on); if (partnerName) $('seatThem').dataset.i = partnerName.slice(0, 1).toUpperCase(); };
   const send = (msg) => { if (conn && conn.open) try { conn.send(msg); } catch (e) {} };
   const shareLink = () => location.origin + location.pathname + '?r=' + roomId;
   const pName = () => partnerName || 'собеседник';
@@ -484,6 +486,15 @@
     setTimeout(() => { if (v.textTracks[0]) v.textTracks[0].mode = 'showing'; }, 50);
     if (share) { send({ t: 'subs', vtt }); toast('Субтитры добавлены'); }
   }
+
+  /* ---------- подсветка от кадра (как ambient mode на YouTube) ---------- */
+  const amb = $('ambient'), actx = amb.getContext('2d', { willReadFrequently: false });
+  setInterval(() => {
+    const has = (hasLocalFile || v.srcObject) && v.readyState >= 2 && v.videoWidth;
+    amb.classList.toggle('on', !!has);
+    if (!has || document.hidden) return;
+    try { actx.drawImage(v, 0, 0, amb.width, amb.height); } catch (e) {}
+  }, 150);
 
   /* ---------- управление ---------- */
   const remoteNow = () => {
