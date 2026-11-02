@@ -235,6 +235,7 @@
         toast(pName() + ({ play: ' включает', pause: ' ставит на паузу', seek: ' перематывает на ' + fmt(m.time) }[m.action] || ''), 1800);
         setTimeout(() => sendState('action'), 60);
         break;
+      case 'restream': if (role === 'host') restartCall('guest asked'); break;
       case 'chat': addMsg(m.text, 'them', m.vt); typingOff(); break;
       case 'typing': typingOn(); break;
       case 'react': floatEmoji(m.e); break;
@@ -277,6 +278,7 @@
     if (call) { try { call.close(); } catch (e) {} call = null; }
     if (v.readyState < 2) await new Promise((r) => v.addEventListener('loadeddata', r, { once: true }));
     const stream = capture();
+    capStream = stream; window.__cs = stream;
     if (!stream) { toast('Этот браузер не умеет транслировать видео. Открой сайт в Chrome или Edge.', 6000); return; }
     const t0 = performance.now();
     while (stream.getTracks().length < 2 && performance.now() - t0 < 2000) await new Promise((r) => setTimeout(r, 100));
@@ -296,6 +298,28 @@
     renderSource();
   }
 
+  // Chrome после конца видео/перезагрузки меняет дорожки captureStream —
+  // подменяем их в трансляции, а если не выходит — перезапускаем звонок.
+  let capStream = null, restartT = null;
+  const restartCall = (why) => { clearTimeout(restartT); restartT = setTimeout(() => { if (role === 'host' && hasLocalFile && partnerWantsStream) startCall(); }, 300); };
+  async function healTracks() {
+    if (role !== 'host' || !call || !capStream) return;
+    const pc = call.peerConnection;
+    if (!pc) return;
+    const live = { video: capStream.getVideoTracks().find((t) => t.readyState === 'live'), audio: capStream.getAudioTracks().find((t) => t.readyState === 'live') };
+    for (const s of pc.getSenders()) {
+      const kind = s.track ? s.track.kind : null;
+      if (!kind) continue;
+      if (!live[kind]) { if (kind === 'video') restartCall('no live track'); continue; }
+      if (s.track !== live[kind]) { try { await s.replaceTrack(live[kind]); } catch (e) { restartCall('replace failed'); } }
+    }
+  }
+  setInterval(healTracks, 1500);
+  // после конца фильма следующий запуск — со свежей трансляцией
+  let endedOnce = false;
+  v.addEventListener('ended', () => { endedOnce = true; });
+  v.addEventListener('play', () => { if (role === 'host' && endedOnce) { endedOnce = false; restartCall('replay'); } });
+
   /* ---------- приём трансляции (гость) ---------- */
   function onRemoteStream(s) {
     if (guestMode === 'local') return;
@@ -304,6 +328,20 @@
     v.play().catch(showTap);
     renderSource();
   }
+  // гость: если фильм идёт, а кадры не приходят — просим перезапустить трансляцию
+  let frames = 0, lastFrames = 0, stuck = 0, lastAsk = 0;
+  const countFrames = () => { frames++; v.requestVideoFrameCallback(countFrames); };
+  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(countFrames);
+  else setInterval(() => { frames += v.currentTime !== countFrames.t ? 1 : 0; countFrames.t = v.currentTime; }, 500);
+  const askRestream = () => { lastAsk = performance.now(); send({ t: 'restream' }); };
+  setInterval(() => {
+    if (role !== 'guest' || guestMode !== 'stream' || !v.srcObject || !remote.playing) { stuck = 0; lastFrames = frames; return; }
+    if (v.paused) v.play().catch(showTap);
+    stuck = frames === lastFrames ? stuck + 1 : 0;
+    lastFrames = frames;
+    if (stuck >= 3 && performance.now() - lastAsk > 8000) askRestream();
+  }, 1000);
+
   function showTap(err) {
     if (err && err.name !== 'NotAllowedError') return;
     $('tapOverlay').classList.remove('hidden');
@@ -422,6 +460,7 @@
       btn('Смотреть трансляцию', backToStream);
     } else if (v.srcObject) {
       add(title);
+      btn('Нет картинки? Переподключить', () => { askRestream(); toast('Переподключаем видео…'); });
       btn('Открыть свои файлы — качество лучше', () => $(isSeries() ? 'seriesInput' : 'fileInput').click());
     }
   }
@@ -525,9 +564,10 @@
   const fsForm = document.createElement('form');
   fsForm.className = 'fs-input hidden';
   fsForm.innerHTML = '<input maxlength="500" placeholder="Написать (Enter)">';
-  player.appendChild(fsForm);
+  $('fsDock').appendChild(fsForm);
   fsForm.onsubmit = (e) => { e.preventDefault(); const i = fsForm.firstChild; sendChat(i.value); i.value = ''; i.blur(); };
   const fsChange = () => fsForm.classList.toggle('hidden', !inFs());
+  fsForm.firstChild.addEventListener('focus', () => wake());
   document.addEventListener('fullscreenchange', fsChange);
   new MutationObserver(fsChange).observe(player, { attributes: true, attributeFilter: ['class'] });
 

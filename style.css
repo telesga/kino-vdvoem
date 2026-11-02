@@ -148,14 +148,17 @@ button,input{font:inherit;color:inherit}
 .send{width:44px;border:0;border-radius:10px;background:var(--paper);color:var(--paper-ink);cursor:pointer;display:grid;place-items:center}
 .send svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* чат поверх фильма во весь экран */
-.fs-chat{display:none}
-.player:fullscreen .fs-chat,.player.pseudo-fs .fs-chat{display:flex;position:absolute;right:24px;bottom:110px;width:min(360px,60%);flex-direction:column;gap:4px;z-index:4;pointer-events:none}
-.fs-chat .msg{transition:opacity 1s}
-.fs-chat .msg.them{background:rgba(37,48,90,.92)}
+/* чат поверх фильма во весь экран: сообщения и поле — одна колонка, не перекрываются */
+.fs-dock{display:none}
+.player:fullscreen .fs-dock,.player.pseudo-fs .fs-dock{display:flex;flex-direction:column;gap:8px;position:absolute;right:24px;bottom:96px;width:min(380px,60%);z-index:6;pointer-events:none}
+.fs-chat{display:flex;flex-direction:column;gap:4px}
+.fs-chat .msg{transition:opacity 1s;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.fs-chat .msg.them{background:rgba(37,48,90,.94)}
 .fs-chat .msg.fade{opacity:0}
-.fs-input{position:absolute;right:24px;bottom:78px;width:min(360px,60%);z-index:6}
-.fs-input input{width:100%;background:rgba(26,36,69,.92);border:0;border-radius:10px;padding:10px 14px;outline:none}
+.fs-input{pointer-events:auto;transition:opacity .3s}
+.fs-input input{width:100%;background:rgba(26,36,69,.94);border:1.5px solid transparent;border-radius:10px;padding:10px 14px;outline:none}
+.fs-input input:focus{border-color:var(--paper)}
+.player.idle .fs-input:not(:focus-within){opacity:0}
 .player.pseudo-fs{position:fixed;inset:0;z-index:100;border-radius:0}
 
 @media (max-width:900px){
