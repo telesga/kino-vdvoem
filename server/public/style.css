@@ -246,3 +246,41 @@ button,input{font:inherit;color:inherit}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   #libBtn{display:none}
 }
+
+/* ===== телефон: видео главное, чат — сколько останется ===== */
+@media (max-width:900px){
+  body{overflow:hidden}
+  .screen.active{height:100svh;min-height:0}
+  #room{height:100svh}
+  .bar{height:48px;padding:0 10px}
+  .btn.small{height:32px;padding:0 12px;font-size:13px}
+  .layout{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 0 8px;gap:6px}
+  .stage{flex:none;gap:4px}
+  .player{flex:none;width:100%;aspect-ratio:var(--ar,16/9);max-height:62svh;border-radius:0;box-shadow:none}
+  .ambient{display:none}
+  .now{padding:0 12px;min-height:20px;font-size:12.5px}
+  .now .q{display:none}
+  .controls{left:0;right:0;bottom:0;border-radius:0;border:0;padding:0 4px 2px;background:linear-gradient(transparent,rgba(0,0,0,.75));-webkit-backdrop-filter:none;backdrop-filter:none}
+  .seek-wrap{padding:8px 8px 2px}
+  .ic{width:34px;height:34px}
+  .ic svg{width:19px;height:19px}
+  .time{font-size:12.5px;margin-left:2px}
+  .chat{flex:1;min-height:0;height:auto;margin:0 8px;border-radius:16px}
+  .messages{padding:10px 10px}
+  .msg{font-size:14.5px;padding:6px 11px}
+  .messages:empty::before{font-size:13px}
+  .sys{padding:4px 0}
+  .chat-input{padding:8px}
+  .chat-input input{height:40px}
+  .send{width:40px;height:40px}
+  .eps{top:6px;right:6px;bottom:50px}
+  .menu{right:6px;bottom:50px}
+  .library{padding:14px}
+}
+@media (max-width:900px) and (orientation:landscape){
+  /* телефон боком: видео во всю высоту, чат справа */
+  .layout{flex-direction:row;padding:0 8px 8px 0}
+  .stage{flex:1;min-width:0}
+  .player{aspect-ratio:auto;height:calc(100svh - 80px);max-height:none}
+  .chat{flex:none;width:38%;margin:0}
+}

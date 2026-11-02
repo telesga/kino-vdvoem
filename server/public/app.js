@@ -5,6 +5,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const v = $('video'), player = $('player');
+  // форма окна плеера = форма видео (важно на телефоне)
+  v.addEventListener('loadedmetadata', () => { if (v.videoWidth && v.videoHeight) player.style.setProperty('--ar', v.videoWidth + '/' + v.videoHeight); });
+  v.addEventListener('resize', () => { if (v.videoWidth && v.videoHeight) player.style.setProperty('--ar', v.videoWidth + '/' + v.videoHeight); });
 
   /* ---------- иконки ---------- */
   const svg = (d) => '<svg viewBox="0 0 24 24">' + d + '</svg>';
@@ -428,7 +431,12 @@
   $('playBtn').onclick = togglePlay;
   $('back10').onclick = () => seekTo(v.currentTime - 10);
   $('fwd10').onclick = () => seekTo(v.currentTime + 10);
-  v.addEventListener('click', togglePlay);
+  // на телефоне первое касание показывает панель, второе — пауза
+  let wasIdle = false;
+  v.addEventListener('click', () => {
+    if (matchMedia('(hover: none)').matches && wasIdle) { wasIdle = false; wake(); return; }
+    togglePlay();
+  });
   v.addEventListener('dblclick', toggleFs);
   const updVol = () => { $('muteBtn').innerHTML = v.muted || v.volume === 0 ? IC.mute : IC.vol; };
   $('volume').value = localStorage.getItem('kino-vol') || 1; v.volume = +$('volume').value;
@@ -489,7 +497,8 @@
   let idleT;
   const wake = () => { player.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if (!v.paused) player.classList.add('idle'); }, 2600); };
   player.addEventListener('pointermove', wake);
-  player.addEventListener('pointerdown', wake);
+  v.addEventListener('play', () => wake()); // панель прячется сама через пару секунд после старта
+  player.addEventListener('pointerdown', () => { wasIdle = player.classList.contains('idle'); wake(); });
 
   document.addEventListener('keydown', (e) => {
     if (!$('room').classList.contains('active')) return;

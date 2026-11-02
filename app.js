@@ -86,6 +86,9 @@
 
   const v = $('video');
   const player = $('player');
+  // форма окна плеера = форма видео (важно на телефоне)
+  v.addEventListener('loadedmetadata', () => { if (v.videoWidth && v.videoHeight) player.style.setProperty('--ar', v.videoWidth + '/' + v.videoHeight); });
+  v.addEventListener('resize', () => { if (v.videoWidth && v.videoHeight) player.style.setProperty('--ar', v.videoWidth + '/' + v.videoHeight); });
 
   /* ---------- лобби ---------- */
   $('nameInput').value = myName;
@@ -586,7 +589,12 @@
   $('playBtn').onclick = togglePlay;
   $('back10').onclick = () => seekTo(curTime() - 10);
   $('fwd10').onclick = () => seekTo(curTime() + 10);
-  v.addEventListener('click', togglePlay);
+  // на телефоне первое касание показывает панель, второе — пауза
+  let wasIdle = false;
+  v.addEventListener('click', () => {
+    if (matchMedia('(hover: none)').matches && wasIdle) { wasIdle = false; wake(); return; }
+    togglePlay();
+  });
   v.addEventListener('dblclick', toggleFs);
 
   const updVol = () => { $('muteBtn').innerHTML = v.muted || v.volume === 0 ? IC.mute : IC.vol; };
@@ -646,7 +654,8 @@
     idleT = setTimeout(() => { if (isPlaying()) player.classList.add('idle'); }, 2600);
   };
   player.addEventListener('pointermove', wake);
-  player.addEventListener('pointerdown', wake);
+  v.addEventListener('play', () => wake()); // панель прячется сама через пару секунд после старта
+  player.addEventListener('pointerdown', () => { wasIdle = player.classList.contains('idle'); wake(); });
 
   // клавиши
   document.addEventListener('keydown', (e) => {
