@@ -4,7 +4,7 @@
 # Повторный запуск обновляет до последней версии (фильмы и пароль сохраняются).
 # Свой пароль:  ... | sudo KINO_PASSWORD='мой пароль' bash
 # Свой домен:   ... | sudo DOMAIN=kino.example.ru bash
-set -euo pipefail
+set -Eeuo pipefail
 
 # Всё внутри функции: bash читает скрипт целиком до запуска,
 # и программы, читающие ввод (needrestart и т.п.), не «съедят» остаток при curl | bash.
@@ -38,8 +38,9 @@ if ! command -v caddy >/dev/null; then
 fi
 
 say "Скачиваю приложение…"
-if [ -d "$APP/.git" ]; then git -C "$APP" fetch -q --depth 1 origin main && git -C "$APP" reset -q --hard origin/main
-else rm -rf "$APP"; git clone -q --depth 1 "$REPO" "$APP"; fi
+rm -rf "$APP"
+git clone --depth 1 "$REPO" "$APP"
+[ -f "$APP/server/server.js" ] || { echo "Не удалось скачать приложение с GitHub"; exit 1; }
 say "Ставлю зависимости приложения…"
 cd "$APP/server"
 command -v npm >/dev/null || apt-get install -y -qq npm >/dev/null
