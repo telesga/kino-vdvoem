@@ -155,8 +155,9 @@ button,input{font:inherit;color:inherit}
 .fs-chat .msg{transition:opacity 1s;box-shadow:0 4px 16px rgba(0,0,0,.35)}
 .fs-chat .msg.them{background:rgba(37,48,90,.94)}
 .fs-chat .msg.fade{opacity:0}
-.fs-input{pointer-events:auto;transition:opacity .3s}
-.fs-input input{width:100%;background:rgba(26,36,69,.94);border:1.5px solid transparent;border-radius:10px;padding:10px 14px;outline:none}
+.fs-input{pointer-events:auto;transition:opacity .3s;display:flex;gap:8px}
+.fs-input .send{flex-shrink:0;height:42px}
+.fs-input input{flex:1;min-width:0;background:rgba(26,36,69,.94);border:1.5px solid transparent;border-radius:10px;padding:10px 14px;outline:none}
 .fs-input input:focus{border-color:var(--paper)}
 .player.idle .fs-input:not(:focus-within){opacity:0}
 .player.pseudo-fs{position:fixed;inset:0;z-index:100;border-radius:0}

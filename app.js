@@ -563,7 +563,7 @@
   $('fsBtn').onclick = toggleFs;
   const fsForm = document.createElement('form');
   fsForm.className = 'fs-input hidden';
-  fsForm.innerHTML = '<input maxlength="500" placeholder="Написать (Enter)">';
+  fsForm.innerHTML = '<input maxlength="500" placeholder="Написать"><button class="send" type="submit" title="Отправить">' + IC.send + '</button>';
   $('fsDock').appendChild(fsForm);
   fsForm.onsubmit = (e) => { e.preventDefault(); const i = fsForm.firstChild; sendChat(i.value); i.value = ''; i.blur(); };
   const fsChange = () => fsForm.classList.toggle('hidden', !inFs());
