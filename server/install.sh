@@ -12,6 +12,7 @@ DATA=/var/lib/kino
 ENVF=/etc/kino.env
 
 say() { printf '\n\033[1;37m▸ %s\033[0m\n' "$*"; }
+trap 'printf "\n\033[1;31m✘ Ошибка (строка %s): %s\033[0m\nПришли этот текст — разберёмся.\n" "$LINENO" "$BASH_COMMAND"' ERR
 [ "$(id -u)" = 0 ] || { echo "Запусти через sudo"; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 
@@ -35,7 +36,10 @@ fi
 say "Скачиваю приложение…"
 if [ -d "$APP/.git" ]; then git -C "$APP" fetch -q --depth 1 origin main && git -C "$APP" reset -q --hard origin/main
 else rm -rf "$APP"; git clone -q --depth 1 "$REPO" "$APP"; fi
-cd "$APP/server" && npm install --omit=dev --no-audit --no-fund --silent
+say "Ставлю зависимости приложения…"
+cd "$APP/server"
+command -v npm >/dev/null || apt-get install -y -qq npm >/dev/null
+npm install --omit=dev --no-audit --no-fund --loglevel=error
 
 id kino >/dev/null 2>&1 || useradd --system --home "$DATA" --shell /usr/sbin/nologin kino
 mkdir -p "$DATA" && chown -R kino:kino "$DATA"
