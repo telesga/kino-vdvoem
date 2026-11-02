@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Смотрим вместе</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='11' cy='16' r='8' fill='%23ff9b3d'/><circle cx='21' cy='16' r='8' fill='%237b61ff' fill-opacity='.85'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+
+<!-- Вход -->
+<section id="lobby" class="screen active">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <form class="ticket" id="loginForm" autocomplete="on">
+    <h1 class="wordmark">Смотрим вместе</h1>
+    <p class="lead">Фильмы лежат на сервере — у обоих исходное качество, а пауза, перемотка и чат общие.</p>
+    <label for="nameInput" class="field-label">Как тебя зовут</label>
+    <input id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false" required>
+    <label for="passInput" class="field-label">Пароль</label>
+    <input id="passInput" type="password" autocomplete="current-password">
+    <p class="err hidden" id="loginErr"></p>
+    <button id="enterBtn" class="btn ink" type="submit">Войти</button>
+  </form>
+</section>
+
+<!-- Зал -->
+<section id="room" class="screen">
+  <header class="bar">
+    <div class="seats" id="seats"></div>
+    <button id="libBtn" class="btn ghost small">Библиотека</button>
+    <button id="copyLinkBtn" class="btn paper small">Пригласить</button>
+  </header>
+
+  <main class="layout">
+    <div class="stage">
+      <canvas class="ambient" id="ambient" width="32" height="18" aria-hidden="true"></canvas>
+      <div class="player" id="player">
+        <video id="video" playsinline preload="auto"></video>
+
+        <!-- Библиотека -->
+        <div class="library" id="library">
+          <div class="lib-head">
+            <div>
+              <h2>Что смотрим?</h2>
+              <p class="lib-sub" id="diskInfo"></p>
+            </div>
+            <div class="lib-actions">
+              <button class="ic hidden" id="libClose" title="Закрыть"></button>
+              <label class="btn paper small">Загрузить<input type="file" id="uploadInput" multiple accept="video/*,.mkv,.avi,.mov,.m4v,.srt,.vtt,.ass" hidden></label>
+            </div>
+          </div>
+
+          <form class="up-form hidden" id="upForm">
+            <label class="field-label" for="upTitle">Название</label>
+            <input id="upTitle" maxlength="120" required>
+            <p class="up-files" id="upFiles"></p>
+            <div class="up-btns"><button class="btn ghost small" type="button" id="upCancel">Отмена</button><button class="btn paper small" type="submit">Начать загрузку</button></div>
+          </form>
+
+          <div class="uploads" id="uploads"></div>
+          <div class="lib-grid" id="libGrid"></div>
+          <p class="lib-empty hidden" id="libEmpty">Пока пусто. Нажми «Загрузить» и выбери фильм или все серии сериала — можно вместе с субтитрами .srt.</p>
+        </div>
+
+        <div class="tap-overlay hidden" id="tapOverlay"><button class="btn paper">Включить со звуком</button></div>
+        <div class="buffering hidden" id="buffering"></div>
+        <div class="toast hidden" id="toast"></div>
+        <div class="reactions" id="reactions"></div>
+        <div class="fs-dock" id="fsDock"><div class="fs-chat" id="fsChat"></div></div>
+
+        <div class="eps hidden" id="epsPanel">
+          <div class="eps-head"><span id="epsTitle">Серии</span><button class="ic" id="epsClose" title="Закрыть"></button></div>
+          <ol class="eps-list" id="epsList"></ol>
+        </div>
+        <div class="menu hidden" id="subsMenu"></div>
+
+        <div class="controls" id="controls">
+          <div class="seek-wrap" id="seekWrap">
+            <div class="seek" id="seek">
+              <div class="seek-buf" id="seekBuf"></div>
+              <div class="seek-fill" id="seekFill"></div>
+              <div class="seek-head" id="seekHead"></div>
+            </div>
+            <div class="seek-tip" id="seekTip">0:00</div>
+          </div>
+          <div class="ctrl-row">
+            <button class="ic big" id="playBtn" title="Пуск / пауза (пробел)"></button>
+            <button class="ic" id="back10" title="Назад на 10 секунд"></button>
+            <button class="ic" id="fwd10" title="Вперёд на 10 секунд"></button>
+            <div class="vol">
+              <button class="ic" id="muteBtn" title="Звук (M)"></button>
+              <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Громкость">
+            </div>
+            <span class="time" id="time">0:00 / 0:00</span>
+            <div class="spacer"></div>
+            <div class="react-bar">
+              <button class="react" data-e="❤️" title="Сердечко">❤️</button>
+              <button class="react" data-e="😂" title="Смешно">😂</button>
+              <button class="react" data-e="😱" title="Страшно">😱</button>
+              <button class="react" data-e="😭" title="Грустно">😭</button>
+            </div>
+            <button class="ic hidden" id="prevEp" title="Предыдущая серия"></button>
+            <button class="ic hidden" id="nextEp" title="Следующая серия"></button>
+            <button class="ic hidden" id="epsBtn" title="Все серии"></button>
+            <button class="ic hidden" id="subsBtn" title="Субтитры"></button>
+            <button class="ic" id="libCtl" title="Библиотека"></button>
+            <button class="ic" id="fsBtn" title="Во весь экран (F)"></button>
+          </div>
+        </div>
+      </div>
+      <div class="now" id="nowBar"></div>
+    </div>
+
+    <aside class="chat">
+      <div class="messages" id="messages"></div>
+      <div class="typing hidden" id="typing"></div>
+      <form class="chat-input" id="chatForm" autocomplete="off">
+        <input id="chatInput" maxlength="500" placeholder="Написать">
+        <button class="send" id="sendBtn" title="Отправить"></button>
+      </form>
+    </aside>
+  </main>
+</section>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>

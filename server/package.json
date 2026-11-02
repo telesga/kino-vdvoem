@@ -1,0 +1,10 @@
+{
+  "name": "kino-vdvoem-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Кино вдвоём — серверная версия: загрузка фильмов, совместный просмотр, чат",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "ws": "^8.18.0" }
+}
